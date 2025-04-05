@@ -1,0 +1,41 @@
+{
+	"Version": 3,
+	"FileReferences": {
+		"Moc": "MermaidStage_1_BabyFish.moc3",
+		"Textures": [
+			"MermaidStage_1_BabyFish.4096/texture_00.png"
+		],
+		"DisplayInfo": "MermaidStage_1_BabyFish.cdi3.json",
+		"Expressions": [
+			{
+				"Name": "WeakState_exp_01",
+				"File": "expressions/WeakState_exp_01.exp3.json"
+			}
+		],
+		"Motions": {
+			"": [
+				{
+					"File": "motion/Eat.motion3.json"
+				}
+			],
+			"Idle": [
+				{
+					"File": "motion/Idle.motion3.json"
+				}
+			]
+		}
+	},
+	"Groups": [
+		{
+			"Target": "Parameter",
+			"Name": "EyeBlink",
+			"Ids": []
+		},
+		{
+			"Target": "Parameter",
+			"Name": "LipSync",
+			"Ids": []
+		}
+	],
+	"HitAreas": []
+}

@@ -1,0 +1,47 @@
+{
+	"Version": 3,
+	"FileReferences": {
+		"Moc": "MermaidStage_4_ Teen.moc3",
+		"Textures": [
+			"MermaidStage_4_ Teen.4096/texture_00.png"
+		],
+		"Physics": "MermaidStage_4_ Teen.physics3.json",
+		"DisplayInfo": "MermaidStage_4_ Teen.cdi3.json",
+		"Expressions": [
+			{
+				"Name": "WeakState_exp_01",
+				"File": "expressions/WeakState_exp_01.exp3.json"
+			}
+		],
+		"Motions": {
+			"": [
+				{
+					"File": "motion/Eat.motion3.json"
+				}
+			],
+			"Idle": [
+				{
+					"File": "motion/Idle.motion3.json"
+				}
+			]
+		}
+	},
+	"Groups": [
+		{
+			"Target": "Parameter",
+			"Name": "EyeBlink",
+			"Ids": [
+				"ParamEyeLOpen",
+				"ParamEyeROpen"
+			]
+		},
+		{
+			"Target": "Parameter",
+			"Name": "LipSync",
+			"Ids": [
+				"ParamMouthForm"
+			]
+		}
+	],
+	"HitAreas": []
+}

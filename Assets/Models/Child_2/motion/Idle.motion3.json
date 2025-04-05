@@ -1,0 +1,45 @@
+{
+	"Version": 3,
+	"Meta": {
+		"Duration": 2.967,
+		"Fps": 30.0,
+		"Loop": true,
+		"AreBeziersRestricted": true,
+		"CurveCount": 1,
+		"TotalSegmentCount": 3,
+		"TotalPointCount": 10,
+		"UserDataCount": 0,
+		"TotalUserDataSize": 0
+	},
+	"Curves": [
+		{
+			"Target": "Parameter",
+			"Id": "ParamTailShake",
+			"Segments": [
+				0,
+				0,
+				1,
+				0.278,
+				0.541,
+				0.556,
+				1,
+				0.833,
+				1,
+				1,
+				1.167,
+				1,
+				1.5,
+				-1,
+				1.833,
+				-1,
+				1,
+				2.211,
+				-1,
+				2.589,
+				-0.77,
+				2.967,
+				-0.064
+			]
+		}
+	]
+}

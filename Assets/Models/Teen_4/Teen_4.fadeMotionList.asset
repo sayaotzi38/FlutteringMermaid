@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 403ae2dd693bb1d4b924f6b8d206b053, type: 3}
+  m_Name: Teen_4.fadeMotionList
+  m_EditorClassIdentifier: 
+  MotionInstanceIds: 12e3ffff98e3ffff62e3ffff3ae3ffff
+  CubismFadeMotionObjects:
+  - {fileID: 11400000, guid: 680871fd678b6bb4ab33c3794a03a6b0, type: 2}
+  - {fileID: 11400000, guid: 2fdcf4a2d9a997e4da5c81f76f2c5dd6, type: 2}
+  - {fileID: 11400000, guid: 24a0e2e5550d0784fa979dda2a26c53e, type: 2}
+  - {fileID: 11400000, guid: d17f96cebe4a9754ab10e92a0e55df61, type: 2}

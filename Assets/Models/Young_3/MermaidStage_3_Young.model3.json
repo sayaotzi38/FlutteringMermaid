@@ -1,0 +1,22 @@
+{
+	"Version": 3,
+	"FileReferences": {
+		"Moc": "MermaidStage_3_Young.moc3",
+		"Textures": [
+			"MermaidStage_3_Young.4096/texture_00.png"
+		],
+		"DisplayInfo": "MermaidStage_3_Young.cdi3.json"
+	},
+	"Groups": [
+		{
+			"Target": "Parameter",
+			"Name": "EyeBlink",
+			"Ids": []
+		},
+		{
+			"Target": "Parameter",
+			"Name": "LipSync",
+			"Ids": []
+		}
+	]
+}

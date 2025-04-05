@@ -1,0 +1,10 @@
+{
+	"Type": "Live2D Expression",
+	"Parameters": [
+		{
+			"Id": "Param_WeakState",
+			"Value": 1,
+			"Blend": "Add"
+		}
+	]
+}
