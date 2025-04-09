@@ -106,7 +106,7 @@ public class MermaidGrowthManager : MonoBehaviour
         }
     }
 
-    private void ForceRefreshGrowth()
+   public void ForceRefreshGrowth()
     {
         currentDays = SaveManager.Instance.SaveDataInstance.daysPassed;
         Debug.Log($"🔁 ForceRefreshGrowth(): daysPassed = {currentDays} を反映");

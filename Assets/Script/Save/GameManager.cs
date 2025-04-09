@@ -2,7 +2,6 @@
 using UnityEngine;
 using System.Collections; // ← これを追加
 
-
 /// <summary>
 /// ゲーム全体を管理するシングルトン。セーブ・ロードや通知処理を行う。
 /// </summary>
@@ -16,7 +15,6 @@ public class GameManager : MonoBehaviour
 
     private static bool isAdmobInitialized = false;
 
-
     void Awake()
     {
         if (Instance == null)
@@ -25,11 +23,8 @@ public class GameManager : MonoBehaviour
             DontDestroyOnLoad(gameObject);
             Debug.Log("🚀 GameManager が初期化されました");
 
-            InitializeAdmobOnce();
-
-            // ✅ SaveManager は直接シングルトンから取得
-            SaveManagerInstance = SaveManager.Instance;
-
+         
+           InitializeAdmobOnce();
             LocalPushNotification.RegisterChannel();
             Debug.Log("📲 通知チャンネルを登録しました");
         }
@@ -40,53 +35,43 @@ public class GameManager : MonoBehaviour
         }
     }
 
-
-
     void Start()
     {
         Debug.Log("🎮 GameManager の Start が呼ばれました");
-
-        StartCoroutine(InitializeAfterDelay());
+        StartCoroutine(InitializeAfterDelay()); // ← これでセーブ初期化は確実に安全なタイミングで！
     }
+
 
     private IEnumerator InitializeAfterDelay()
     {
-        yield return null; // ✅ 他のAwakeが終わるのを待つ
+        yield return null;
 
         Debug.Log("🚀 GameManager 起動！（1フレーム遅延）");
 
-        // ✅ SaveManager を明示的に取得・ロード
         SaveManagerInstance = SaveManager.Instance;
 
-        if (SaveManagerInstance != null)
+        if (SaveManagerInstance == null)
         {
-            SaveManagerInstance.Load();
-            Debug.Log("📦 GameManager で SaveManager.Load() を呼びました");
-        }
-        else
-        {
-            Debug.LogError("❌ GameManager: SaveManager.Instance が null です！（遅延後でも）");
-            yield break; // これ以上進めない
+            Debug.LogError("❌ SaveManager.Instance が null → 処理中断");
+            yield break;
         }
 
-        if (SaveManagerInstance.SaveDataInstance != null)
+        SaveManagerInstance.Load();
+
+        yield return new WaitForSeconds(0.1f);
+
+        if (SaveManagerInstance.SaveDataInstance == null)
         {
-            Debug.Log($"🕒 最後のセーブ時刻: {SaveManagerInstance.SaveDataInstance.lastSaveTime}");
-        }
-        else
-        {
-            Debug.LogWarning("⚠ SaveDataInstance が null です（セーブ時刻は表示できません）");
-            yield break; // データが無ければシミュレーションもしない
+            Debug.LogError("❌ SaveDataInstance が null → 処理中断");
+            yield break;
         }
 
-        // ✅ 経過時間の再現処理を呼び出し
+        Debug.Log($"🕒 最後のセーブ時刻: {SaveManagerInstance.SaveDataInstance.lastSaveTime}");
+
+        Debug.Log("✅ SimulateTimePassed() を呼び出します");
         SimulateTimePassed();
     }
 
-
-    /// <summary>
-    /// アプリ起動時に一度だけ AdMob を初期化する
-    /// </summary>
     private void InitializeAdmobOnce()
     {
         if (!isAdmobInitialized)
@@ -97,12 +82,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-
-
-
-    /// <summary>
-    /// アプリがフォーカスを失ったときの処理（バックグラウンド）
-    /// </summary>
     private void OnApplicationFocus(bool focus)
     {
         Debug.Log($"== Focus Changed: {focus} ==");
@@ -128,82 +107,89 @@ public class GameManager : MonoBehaviour
         }
     }
 
-
     void OnApplicationPause(bool pause)
     {
         if (pause)
         {
-            SaveManager.Instance.Save();
-            Debug.Log("[GameManager] アプリ中断 → セーブ実行");
-        }
-    }
-    /// <summary>
-    /// アプリ終了時のセーブ処理
-    /// </summary>
-    private void OnApplicationQuit()
-    {
-        if (SaveManagerInstance != null)
-        {
-            SaveManagerInstance.Save();
-            Debug.Log("💾 アプリ終了時にデータを保存しました");
-        }
-        else
-        {
-            Debug.LogWarning("⚠ OnApplicationQuit(): SaveManagerInstance が null のためセーブできませんでした");
+            if (SaveManager.Instance != null)
+            {
+                SaveManager.Instance.Save();
+                Debug.Log("[GameManager] アプリ中断 → セーブ実行");
+            }
+            else
+            {
+                Debug.LogWarning("⚠ SaveManager.Instance が null のため、セーブをスキップします");
+            }
         }
     }
 
+
+    /// <summary>
+    /// アプリを閉じていた時間の間に経過したゲーム内処理を再現する
+    /// </summary>
     private void SimulateTimePassed()
     {
-        if (SaveManager.Instance == null)
+        if (SaveManager.Instance == null || SaveManager.Instance.SaveDataInstance == null)
         {
-            Debug.LogWarning("⚠ SimulateTimePassed(): SaveManager.Instance が null → スキップ");
-            return;
-        }
-
-        if (SaveManager.Instance.SaveDataInstance == null)
-        {
-            Debug.LogWarning("⚠ SimulateTimePassed(): SaveDataInstance が null → スキップ");
+            Debug.LogWarning("⚠ SimulateTimePassed(): セーブデータが null → スキップ");
             return;
         }
 
         var saveData = SaveManager.Instance.SaveDataInstance;
         DateTime now = DateTime.Now;
-        DateTime last = saveData.lastSaveTime;
 
-        TimeSpan elapsed = now - last;
+        // 🎯 成長用：累計日数
+        TimeSpan totalElapsed = now - saveData.gameStartTime;
+        int totalDays = (int)totalElapsed.TotalDays;
+        int newDays = totalDays - saveData.daysPassed;
 
-        Debug.Log($"⏳ 経過時間シミュレーション: {elapsed.TotalMinutes:F1} 分経過");
+        Debug.Log($"⏳ 累計プレイ時間: {totalElapsed.TotalHours:F1} 時間 → {totalDays} 日");
 
-        // 🍽 満腹度：4日（345600秒）で0になる
-        float hungerDecreaseRate = 100f / 345600f;
-        float hungerDecrease = (float)(elapsed.TotalSeconds * hungerDecreaseRate);
-        saveData.hungerTimeRemaining = Mathf.Max(0f, saveData.hungerTimeRemaining - hungerDecrease);
-        Debug.Log($"🍽 経過時間で空腹度を {hungerDecrease:F2} 減少 → 現在: {saveData.hungerTimeRemaining:F2}%");
-
-        // 💧 水質：5日（432000秒）で100%になる
-        float pollutionIncreaseRate = 100f / 432000f;
-        float pollutionIncrease = (float)(elapsed.TotalSeconds * pollutionIncreaseRate);
-        saveData.waterPollutionLevel = Mathf.Min(100f, saveData.waterPollutionLevel + pollutionIncrease);
-        Debug.Log($"💧 経過時間で汚れを {pollutionIncrease:F4} 増加 → 現在: {saveData.waterPollutionLevel:F2}%");
-
-        // 🧜 成長：1日ごとに1成長
-        int daysPassed = (int)elapsed.TotalDays;
-        if (daysPassed > 0)
+        if (newDays > 0)
         {
-            saveData.daysPassed += daysPassed;
-            Debug.Log($"🧜 成長日数を {daysPassed} 日加算 → 合計: {saveData.daysPassed} 日");
+            saveData.daysPassed += newDays;
+            Debug.Log($"🧜 成長日数を {newDays} 日加算 → 合計: {saveData.daysPassed} 日");
+
+            var growthManager = FindFirstObjectByType<MermaidGrowthManager>();
+            if (growthManager != null)
+            {
+                growthManager.ForceRefreshGrowth();
+                Debug.Log("🧜‍♀️ 成長状態を SimulateTimePassed() で強制更新しました");
+            }
         }
 
-        SaveManager.Instance.Save(); // 上書き保存
+
+        Debug.Log($"🛠 [DEBUG] lastSaveTime: {saveData.lastSaveTime}, now: {now}GMcs");
+        // 🌊 汚れ加算用：最後のセーブ時からの経過時間
+        TimeSpan elapsedSinceLastSave = now - saveData.lastSaveTime;
+        // ✅ この直後にログを追加
+        Debug.Log($"🕓 アプリを閉じていた時間: {elapsedSinceLastSave.TotalMinutes:F1} 分（{elapsedSinceLastSave.TotalSeconds:F0} 秒）");
+
+        float secondsElapsed = (float)elapsedSinceLastSave.TotalSeconds;
+        float pollutionIncrease = secondsElapsed * 0.0002314815f; // 約5日で100%加算されるレート
+
+        saveData.waterPollutionLevel = Mathf.Clamp(
+            saveData.waterPollutionLevel + pollutionIncrease,
+            0f, 100f);
+
+        Debug.Log($"🌊 閉じていた時間による水質加算: +{pollutionIncrease:F2} → 現在: {saveData.waterPollutionLevel:F2}%");
+
+
+        // 💡 空腹度減少処理をここに追加
+        float hungerLoss = (float)(now - saveData.lastSaveTime).TotalSeconds * (100f / 345600f); // 4日でゼロ
+
+        saveData.hungerTimeRemaining = Mathf.Clamp(
+            saveData.hungerTimeRemaining - hungerLoss,
+            0f, 100f);
+
+        Debug.Log($"🍽 閉じていた間の空腹度減少: -{hungerLoss:F2} → 現在: {saveData.hungerTimeRemaining:F2}%");
+
+
+        saveData.lastSaveTime = now;
+        SaveManager.Instance.Save();
     }
 
 
-
-
-    /// <summary>
-    /// 条件に応じた通知スケジュールを設定（バックグラウンド時のみ）
-    /// </summary>
     private void SetupNotifications()
     {
         var data = SaveManagerInstance.SaveDataInstance;
@@ -230,28 +216,18 @@ public class GameManager : MonoBehaviour
         }
     }
 
-
-
-    /// <summary>
-    /// ゲームデータを手動でセーブする関数
-    /// </summary>
     public void SaveGame()
     {
         SaveManagerInstance.Save();
         Debug.Log("✅ SaveGame を呼び出して手動でセーブしました");
     }
 
-
-    /// <summary>
-    /// ゲーム全体の状態とUI・アニメ・セーブを完全初期化する関数（ゲームオーバーやタイトル復帰時に使用）
-    /// </summary>
     public void ResetEverything()
     {
         Debug.Log("🧹 ResetEverything(): ゲーム全体を初期化します");
 
         MermaidStatus.SkipLoadFromSaveData = true;
 
-        // ✅ セーブデータ初期化
         if (SaveManager.Instance != null)
         {
             SaveManager.Instance.ResetAllGameState();
@@ -261,7 +237,6 @@ public class GameManager : MonoBehaviour
             Debug.LogWarning("⚠ SaveManager.Instance が null のため、ResetAllGameState をスキップします");
         }
 
-        // ✅ 人魚のステータスを初期化
         var status = FindFirstObjectByType<MermaidStatus>();
         if (status != null)
         {
@@ -275,7 +250,6 @@ public class GameManager : MonoBehaviour
             Debug.LogWarning("⚠ MermaidStatus がシーンに存在しないため、ステータスリセットをスキップします");
         }
 
-        // ✅ 成長データのリセット
         var growth = FindFirstObjectByType<MermaidGrowthManager>();
         if (growth != null)
         {
@@ -286,7 +260,6 @@ public class GameManager : MonoBehaviour
             Debug.LogWarning("⚠ MermaidGrowthManager が見つかりませんでした");
         }
 
-        // ✅ 水質のリセット
         var water = FindFirstObjectByType<WaterManager>();
         if (water != null)
         {
@@ -297,7 +270,6 @@ public class GameManager : MonoBehaviour
             Debug.LogWarning("⚠ WaterManager が見つかりませんでした");
         }
 
-        // ✅ 最後にセーブ
         if (SaveManager.Instance != null)
         {
             SaveManager.Instance.Save();
@@ -308,14 +280,4 @@ public class GameManager : MonoBehaviour
             Debug.LogWarning("⚠ SaveManager.Instance が null のため、セーブをスキップします");
         }
     }
-
-
-
-
-
-
-
-
-
-
 }

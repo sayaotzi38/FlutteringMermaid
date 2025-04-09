@@ -215,7 +215,7 @@ public class MermaidStatus : MermaidBase
 
             hunger = Mathf.Clamp(hunger - hungerDecreaseRate, minHunger, maxHunger);
 
-            Debug.Log($"🍽 満腹度減少: {hunger}（rate={hungerDecreaseRate}）");
+           
 
             UpdateHungerUI();
 
@@ -268,7 +268,7 @@ public class MermaidStatus : MermaidBase
     /// </summary>
     public void UpdateHungerUI()
     {
-        Debug.Log($"🟢 UpdateHungerUI(): 現在の hunger = {hunger}");
+       
 
         if (stomachText != null)
         {
@@ -565,15 +565,20 @@ public class MermaidStatus : MermaidBase
 
     private void LoadHungerFromSaveData()
     {
+        if (SaveManager.Instance == null || SaveManager.Instance.SaveDataInstance == null)
+        {
+            Debug.LogWarning("⚠ SaveManagerが未初期化のため、空腹度ロードをスキップします");
+            return;
+        }
+
         isAlive = SaveManager.Instance.SaveDataInstance.isAlive;
-
         hunger = Mathf.Clamp(SaveManager.Instance.SaveDataInstance.hungerTimeRemaining, minHunger, maxHunger);
-
         isWeakState = SaveManager.Instance.SaveDataInstance.isWeak;
 
         Debug.Log($"📦 mermaidSt.csセーブデータから空腹度を読み込みました: {hunger}%");
         Debug.Log($"📦 mermaidSt.csセーブデータから衰弱状態を復元しました: {isWeakState}");
     }
+
 
 
 

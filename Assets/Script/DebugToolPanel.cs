@@ -13,8 +13,8 @@ public class DebugToolPanel : MonoBehaviour
     public MermaidStatus mermaidStatus;
     public WaterManager waterManager;
 
-    [Header("水質関連")]
-    public TextMeshProUGUI dirtText;
+    //[Header("水質関連")]
+    //public TextMeshProUGUI dirtText;
 
     [Header("まんぷく度0%")]
     public Button killButton;
@@ -36,7 +36,7 @@ public class DebugToolPanel : MonoBehaviour
             Debug.Log("☠ 『満腹度0で死亡』ボタンを初期化しました");
         }
 
-        UpdateDirtDisplay();
+        
     }
 
     /// <summary>
@@ -48,20 +48,11 @@ public class DebugToolPanel : MonoBehaviour
         {
             float alphaValue = waterManager.MaxDirtAlpha * (targetPercent / 100f);
             waterManager.SetDirtAlpha(alphaValue);
-            UpdateDirtDisplay();
+           
         }
     }
 
-    /// <summary>
-    /// 表示中の水質テキストを更新
-    /// </summary>
-    private void UpdateDirtDisplay()
-    {
-        if (waterManager != null && dirtText != null)
-        {
-            dirtText.text = $"よごれ: {waterManager.DirtPercentage:F1}%";
-        }
-    }
+   
 
     /// <summary>
     /// 満腹度を0%にし、死亡処理を実行（確認付き）

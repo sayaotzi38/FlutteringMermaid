@@ -19,8 +19,8 @@ public class WaterManager : MonoBehaviour
     [SerializeField] private float maxDirtAlpha = 100.0f;
     [SerializeField] private float dirtIncreaseRate = 0.0002314815f;//5日
     [SerializeField] private float currentDirtAlpha = 0f;
-    [Header("デバッグ表示用：水質数値")]
-    public TextMeshProUGUI dirtDebugText;
+    [Header("水質表示用テキスト（UI）")]
+    public TextMeshProUGUI dirtText;
 
 
     [Header("UI設定")]
@@ -46,14 +46,9 @@ public class WaterManager : MonoBehaviour
 
     private void Start()
     {
-
+       
 
         LoadDirtFromSaveData(); // ✅ セーブデータから汚れ度を復元
-
-        if (dirtOverlay != null)
-        {
-            dirtOverlay.color = new Color(1f, 1f, 1f, 0f);
-        }
 
         if (cleanWaterButton != null)
         {
@@ -72,14 +67,15 @@ public class WaterManager : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning("⚠ MermaidStatus が見つかりません！インスペクターにも設定されていません！");
+                Debug.LogWarning("⚠ MermaidStatus が見つかりません！");
             }
         }
 
-        
-
+      
         StartCoroutine(IncreaseDirtOverTime());
     }
+
+
 
     /// <summary>
     /// デバッグ用：水質（汚れ度）を指定した割合だけ増減する
@@ -257,6 +253,9 @@ public class WaterManager : MonoBehaviour
 
     private IEnumerator IncreaseDirtOverTime()
     {
+        // 初回の待機をスキップして、汚れをすぐに増やさない
+        yield return new WaitForSeconds(1.0f); // 最初の1秒は変更なし
+
         while (currentDirtAlpha < maxDirtAlpha)
         {
             float waitTime = SaveManager.isDebugSpeed ? 1f / SaveManager.debugTimeScale : 1f;
@@ -267,6 +266,7 @@ public class WaterManager : MonoBehaviour
             CheckAndKillMermaidIfNeeded("⚠ 汚れが 100% になりました！人魚は死んでしまいます...");
         }
     }
+
 
 
     /// <summary>
@@ -309,6 +309,8 @@ public class WaterManager : MonoBehaviour
 
     private void UpdateDirtAlpha()
     {
+        Debug.Log($"🌊 UpdateDirtAlpha() 実行: currentDirtAlpha = {currentDirtAlpha}, DirtPercentage = {DirtPercentage:F2}%");
+
         if (dirtOverlay != null)
         {
             float normalizedAlpha = Mathf.Clamp01(currentDirtAlpha / maxDirtAlpha);
@@ -320,11 +322,9 @@ public class WaterManager : MonoBehaviour
             dirtStatusText.text = $"よごれ: {DirtPercentage:F2}%";
         }
 
-        if (dirtDebugText != null)
-        {
-            dirtDebugText.text = $"Dirt: {DirtPercentage:F2}%";
-        }
+        
     }
+
 
 
 
@@ -378,12 +378,17 @@ public class WaterManager : MonoBehaviour
             return;
         }
 
-        currentDirtAlpha = Mathf.Clamp(
-            GameManager.Instance.SaveManagerInstance.SaveDataInstance.waterPollutionLevel,
-            0f, maxDirtAlpha);
+        float savedPollution = GameManager.Instance.SaveManagerInstance.SaveDataInstance.waterPollutionLevel;
+
+        Debug.Log($"📦 SaveDataから読み込んだ水質: {savedPollution * 100f:0.00}%");
+
+        currentDirtAlpha = Mathf.Clamp(savedPollution, 0f, maxDirtAlpha);
+
+        Debug.Log($"📥 currentDirtAlpha に反映: {currentDirtAlpha * 100f:0.00}%");
 
         UpdateDirtAlpha();
-        Debug.Log($"📦 水質をロードしました: {currentDirtAlpha}");
+
+        // 念のため再格納（不要であれば省略可）
         SaveManager.Instance.SaveDataInstance.waterPollutionLevel = currentDirtAlpha;
 
         if (mermaidStatus != null)
@@ -392,6 +397,7 @@ public class WaterManager : MonoBehaviour
             Debug.Log("🔁 水質読み込み後に CheckWeakState() を呼び出しました");
         }
     }
+
 
     private void SyncPollutionFromSave()
     {

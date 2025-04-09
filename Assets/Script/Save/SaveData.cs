@@ -13,8 +13,8 @@ public class SaveData
     public DateTime lastSaveTime;     // 最後に保存した時間
     public int mermaidGrowthLevel;    // 人魚の成長度（レベル）
     public int daysPassed;            // ゲーム内経過日数
-    public bool isWeak;　　　　　　　 // 人魚が衰弱状態かどうか 
-
+    public bool isWeak;               // 人魚が衰弱状態かどうか
+    public DateTime gameStartTime;    // 🌟 ゲーム開始時刻（累計時間成長の基準）
 
     /// <summary>
     /// 初期データを設定
@@ -25,6 +25,8 @@ public class SaveData
         waterPollutionLevel = 0f;
         mermaidGrowthLevel = 1;
         daysPassed = 0;
-        isWeak = false; // ← 初期値も忘れずに
+        isWeak = false;
+        lastSaveTime = DateTime.Now;
+        gameStartTime = DateTime.Now; // 🎯 初回に保存される
     }
 }

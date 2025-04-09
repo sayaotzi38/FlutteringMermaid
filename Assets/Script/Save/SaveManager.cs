@@ -15,10 +15,11 @@ public class SaveManager : MonoBehaviour
 
     private void Awake()
     {
+        
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);
+            DontDestroyOnLoad(gameObject); // ✅ アプリ終了時にも生き残る
             Debug.Log("💾 SaveManager が初期化されました");
 
             Load(); // ✅ 起動時に明示的にセーブデータをロード
@@ -30,14 +31,33 @@ public class SaveManager : MonoBehaviour
     }
 
     /// <summary>
+    /// アプリ終了時のセーブ処理
+    /// </summary>
+    // SaveManager.cs にこのまま書くのがベスト！
+    private void OnApplicationQuit()
+    {
+        Debug.Log("📴 SaveManager: OnApplicationQuit() 実行");
+
+        if (SaveDataInstance != null)
+        {
+            Save();
+        }
+        else
+        {
+            Debug.LogWarning("⚠ SaveDataInstance が null のため保存をスキップします");
+        }
+    }
+
+
+    /// <summary>
     /// データの保存
     /// </summary>
     public void Save()
     {
         if (SaveDataInstance == null)
         {
-            Debug.LogWarning("💾 Save() 呼び出し時に SaveDataInstance が null → 初期化します");
-            SaveDataInstance = new SaveData();
+            Debug.LogError("💥 SaveDataInstance が null のため保存を中止します");
+            return;
         }
 
         SaveDataInstance.lastSaveTime = DateTime.Now;
@@ -48,6 +68,7 @@ public class SaveManager : MonoBehaviour
         PlayerPrefs.SetInt("days", SaveDataInstance.daysPassed);
         PlayerPrefs.SetString("lastSaveTime", SaveDataInstance.lastSaveTime.ToString());
         PlayerPrefs.SetInt("isWeak", SaveDataInstance.isWeak ? 1 : 0);
+        PlayerPrefs.SetString("gameStartTime", SaveDataInstance.gameStartTime.ToString());
 
         PlayerPrefs.Save();
         Debug.Log($"💾 セーブ完了！時刻: {SaveDataInstance.lastSaveTime}");
@@ -60,15 +81,28 @@ public class SaveManager : MonoBehaviour
     {
         Debug.Log("📦 SaveManager: ロード処理開始");
 
-        SaveDataInstance = new SaveData(); // ✅ このタイミングで新規インスタンス化
+        SaveDataInstance = new SaveData();
 
         SaveDataInstance.mermaidGrowthLevel = PlayerPrefs.GetInt("growthLevel", 1);
         SaveDataInstance.hungerTimeRemaining = PlayerPrefs.GetFloat("hunger", 345600f);
         SaveDataInstance.waterPollutionLevel = PlayerPrefs.GetFloat("pollution", 0f);
         SaveDataInstance.daysPassed = PlayerPrefs.GetInt("days", 0);
 
-        string savedTime = PlayerPrefs.GetString("lastSaveTime", null);
-        SaveDataInstance.lastSaveTime = DateTime.TryParse(savedTime, out var parsed) ? parsed : DateTime.Now;
+        string savedTime = PlayerPrefs.GetString("lastSaveTime", "");
+        if (!string.IsNullOrEmpty(savedTime) && DateTime.TryParse(savedTime, out var parsed))
+        {
+            SaveDataInstance.lastSaveTime = parsed;
+        }
+        else
+        {
+            Debug.LogWarning($"⚠ lastSaveTime の読み込みに失敗 → 現在時刻を使用します。savedTime='{savedTime}'");
+            SaveDataInstance.lastSaveTime = DateTime.Now;
+        }
+
+
+        string startTime = PlayerPrefs.GetString("gameStartTime", null);
+        SaveDataInstance.gameStartTime = DateTime.TryParse(startTime, out var parsedStart) ? parsedStart : DateTime.Now;
+        Debug.Log($"🕰️ gameStartTime: {SaveDataInstance.gameStartTime}");
 
         SaveDataInstance.isWeak = PlayerPrefs.GetInt("isWeak", 0) == 1;
 
@@ -82,7 +116,7 @@ public class SaveManager : MonoBehaviour
     {
         Debug.Log("🔄 SaveManager: ゲームデータの初期化を実行");
 
-        SaveDataInstance = new SaveData(); // ✅ ここでは明示的に新規作成
+        SaveDataInstance = new SaveData();
 
         Save();
         Debug.Log("✅ ResetAllGameState(): データ初期化完了");
