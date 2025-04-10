@@ -16,12 +16,8 @@ public class WaterManager : MonoBehaviour
     [SerializeField] private Image dirtOverlay;
 
     [Header("汚れ増加設定")]
-    [SerializeField] private float maxDirtAlpha = 100.0f;
-    [SerializeField] private float dirtIncreaseRate = 0.0002314815f;//5日
-    [SerializeField] private float currentDirtAlpha = 0f;
-    [Header("水質表示用テキスト（UI）")]
-    public TextMeshProUGUI dirtText;
-
+    private float maxDirtAlpha = 100.0f;
+     private float dirtIncreaseRate = 0.0002314815f;//5日
 
     [Header("UI設定")]
     [SerializeField] private Button cleanWaterButton;
@@ -41,29 +37,38 @@ public class WaterManager : MonoBehaviour
     [SerializeField] private Image flashImage;
     [SerializeField] private float flashDuration = 0.5f;
 
- 
 
-    public float DirtPercentage => (currentDirtAlpha / maxDirtAlpha) * 100f;
+
+    public float DirtPercentage => (SaveManager.Instance.SaveDataInstance.waterPollutionLevel / maxDirtAlpha) * 100f;
+
     public float MaxDirtAlpha => maxDirtAlpha;
 
-    private IEnumerator Start()
+
+    private void Awake()
     {
-        // GameManager の初期化完了 → SaveDataInstance の読み込み完了まで待機
+        // GameObjectのアクティブ直後に初期化コルーチンを開始
+        StartCoroutine(MyStart());
+    }
+
+    private IEnumerator MyStart()
+    {
+        // GameManagerとセーブデータの準備が完了するまで待機
         yield return new WaitUntil(() =>
             GameManager.Instance != null &&
             GameManager.Instance.SaveManagerInstance != null &&
             GameManager.Instance.SaveManagerInstance.SaveDataInstance != null);
 
-        Debug.Log("🌊 WaterManager.Start(): GameManagerとSaveManagerの初期化完了 → LoadDirtFromSaveData 実行");
+        Debug.Log("🌊 WaterManager.MyStart(): GameManagerとSaveManagerの初期化完了 → LoadDirtFromSaveData 実行");
 
-        yield return new WaitForSeconds(0.1f); // ← 追加！少し待つことで確実にSimulateTimePassed後に反映される
+        // GameManagerがSimulateTimePassed()を呼び終えるまで少し待機
+        yield return new WaitForSeconds(0.1f);
+
         LoadDirtFromSaveData();
         Debug.Log($"💧 水質ロード完了: {SaveManager.Instance.SaveDataInstance.waterPollutionLevel}%");
 
         StartCoroutine(IncreaseDirtOverTime());
-      
 
-        // その他の処理
+        // その他のUI・音などの初期化
         if (cleanWaterButton != null)
         {
             cleanWaterButton.onClick.AddListener(CleanWater);
@@ -76,10 +81,8 @@ public class WaterManager : MonoBehaviour
         {
             mermaidStatus = FindAnyObjectByType<MermaidStatus>();
         }
-
-       
-
     }
+
 
 
 
@@ -91,21 +94,34 @@ public class WaterManager : MonoBehaviour
     /// <param name="percent">増減する割合（マイナスも可）</param>
     public void AddDirtPercentage(float percent)
     {
+        var saveData = SaveManager.Instance.SaveDataInstance;
+
+        if (saveData == null)
+        {
+            Debug.LogWarning("⚠ SaveDataInstance が null のため、AddDirtPercentage をスキップします");
+            return;
+        }
+
         float addAmount = maxDirtAlpha * (percent / 100f);
 
-        // 🔧 修正: 100%以上のときは強制的に最大値にする
-        currentDirtAlpha = Mathf.Clamp(currentDirtAlpha + addAmount, 0f, maxDirtAlpha);
+        // 加算してClamp
+        saveData.waterPollutionLevel = Mathf.Clamp(
+            saveData.waterPollutionLevel + addAmount,
+            0f,
+            maxDirtAlpha);
 
-        // ここ追加！強制的に100%にするオプション
+        // 100%以上なら強制的に最大に
         if (percent >= 100f)
         {
-            currentDirtAlpha = maxDirtAlpha;
+            saveData.waterPollutionLevel = maxDirtAlpha;
         }
 
         Debug.Log($"🧪 汚れを {percent:+0.0;-0.0}% 増減 → 現在: {DirtPercentage:F1}%");
+
         UpdateDirtAlpha();
         CheckAndKillMermaidIfNeeded("⚠ デバッグ操作により汚れが 100% に到達しました");
     }
+
 
 
 
@@ -123,7 +139,14 @@ public class WaterManager : MonoBehaviour
     {
         Debug.Log("🧼 水替えを実行！ 汚れをリセットします。");
 
-        currentDirtAlpha = 0f;
+        var saveData = SaveManager.Instance != null ? SaveManager.Instance.SaveDataInstance : null;
+        if (saveData == null)
+        {
+            Debug.LogWarning("⚠ SaveDataInstance が null のため、水質リセットをスキップします");
+            return;
+        }
+
+        saveData.waterPollutionLevel = 0f;
         UpdateDirtAlpha();
 
         // フラグ初期化（毎回掃除のたびにリセット）
@@ -152,6 +175,7 @@ public class WaterManager : MonoBehaviour
         StopCoroutine(IncreaseDirtOverTime());
         StartCoroutine(IncreaseDirtOverTime());
     }
+
 
 
 
@@ -248,32 +272,56 @@ public class WaterManager : MonoBehaviour
     /// <param name="newAlpha">設定する汚れ度（0～100の範囲）</param>
     public void SetDirtAlpha(float newAlpha)
     {
-        Debug.Log($"🖌 汚れの透明度を {newAlpha} に設定_WMcs");
+        var saveData = SaveManager.Instance != null ? SaveManager.Instance.SaveDataInstance : null;
+        if (saveData == null)
+        {
+            Debug.LogWarning("⚠ SaveDataInstance が null のため、SetDirtAlpha をスキップします");
+            return;
+        }
 
-        currentDirtAlpha = Mathf.Clamp(newAlpha, 0f, maxDirtAlpha);
+        saveData.waterPollutionLevel = Mathf.Clamp(newAlpha, 0f, 100f);
+        Debug.Log($"🖌 汚れを {saveData.waterPollutionLevel:F3}% に設定しました");
+
         UpdateDirtAlpha();
 
-        // 💀 追加：汚れが最大になったら死亡チェックを実行
+        // 💀 汚れが最大になったら死亡チェックを実行
         CheckAndKillMermaidIfNeeded("SetDirtAlpha() により最大汚れに到達 → 死亡処理を実行");
     }
 
 
 
+
     private IEnumerator IncreaseDirtOverTime()
     {
-        // 初回の待機をスキップして、汚れをすぐに増やさない
+        Debug.Log("📈 IncreaseDirtOverTime() コルーチン開始");
+
         yield return new WaitForSeconds(1.0f); // 最初の1秒は変更なし
 
-        while (currentDirtAlpha < maxDirtAlpha)
+        var saveData = SaveManager.Instance != null ? SaveManager.Instance.SaveDataInstance : null;
+        if (saveData == null)
+        {
+            Debug.LogWarning("⚠ IncreaseDirtOverTime(): SaveDataInstance が null のため中断します");
+            yield break;
+        }
+
+        while (saveData.waterPollutionLevel < 100f)
         {
             float waitTime = SaveManager.isDebugSpeed ? 1f / SaveManager.debugTimeScale : 1f;
             yield return new WaitForSeconds(waitTime);
 
-            currentDirtAlpha = Mathf.Clamp(currentDirtAlpha + dirtIncreaseRate, 0f, maxDirtAlpha);
+            saveData.waterPollutionLevel = Mathf.Clamp(
+                saveData.waterPollutionLevel + dirtIncreaseRate,
+                0f, 100f);
+
+            Debug.Log($"🔄 汚れ増加中: {saveData.waterPollutionLevel:F4}");
+
             UpdateDirtAlpha();
             CheckAndKillMermaidIfNeeded("⚠ 汚れが 100% になりました！人魚は死んでしまいます...");
         }
+
+        Debug.Log("✅ 汚れが 100% に達したためコルーチン終了");
     }
+
 
 
 
@@ -282,15 +330,22 @@ public class WaterManager : MonoBehaviour
     /// </summary>
     public void CheckAndKillMermaidIfNeeded(string logMessage)
     {
-        if (currentDirtAlpha >= maxDirtAlpha - 0.01f && !isMermaidKilled)
+        var saveData = SaveManager.Instance != null ? SaveManager.Instance.SaveDataInstance : null;
+        if (saveData == null)
         {
-            Debug.Log("⚠ 汚れが 100% になりました → 死亡トリガー発動");
-            KillMermaid();
+            Debug.LogWarning("⚠ CheckAndKillMermaidIfNeeded(): セーブデータが null のため中断");
+            return;
         }
 
+        if (saveData.waterPollutionLevel >= 100f - 0.01f && !isMermaidKilled)
+        {
+            Debug.Log(logMessage);
+            KillMermaid();
+        }
     }
 
-   public void KillMermaid()
+
+    public void KillMermaid()
     {
         if (mermaidStatus == null)
         {
@@ -317,20 +372,19 @@ public class WaterManager : MonoBehaviour
 
     private void UpdateDirtAlpha()
     {
-        Debug.Log($"🌊 UpdateDirtAlpha() 実行: currentDirtAlpha = {currentDirtAlpha}, DirtPercentage = {DirtPercentage:F2}%");
+        float current = SaveManager.Instance.SaveDataInstance.waterPollutionLevel;
+        Debug.Log($"🌊 UpdateDirtAlpha() 実行: current = {current}, DirtPercentage = {DirtPercentage:F3}%");
 
         if (dirtOverlay != null)
         {
-            float normalizedAlpha = Mathf.Clamp01(currentDirtAlpha / maxDirtAlpha);
+            float normalizedAlpha = Mathf.Clamp01(current / maxDirtAlpha);
             dirtOverlay.color = new Color(1f, 1f, 1f, normalizedAlpha);
         }
 
         if (dirtStatusText != null)
         {
-            dirtStatusText.text = $"よごれ: {DirtPercentage:F2}%";
+            dirtStatusText.text = $"よごれ: {DirtPercentage:F3}%";
         }
-
-        
     }
 
 
@@ -343,10 +397,19 @@ public class WaterManager : MonoBehaviour
     public void ResetWaterQuality()
     {
         Debug.Log("🧼 ResetWaterQuality(): 水質を初期状態にリセットします");
-        currentDirtAlpha = 0f;
+
+        var saveData = SaveManager.Instance != null ? SaveManager.Instance.SaveDataInstance : null;
+        if (saveData == null)
+        {
+            Debug.LogWarning("⚠ セーブデータが null のため、水質リセットをスキップします");
+            return;
+        }
+
+        saveData.waterPollutionLevel = 0f;
         UpdateDirtAlpha();
-        SaveDirtToSaveData();
+        SaveManager.Instance.Save();
     }
+
 
 
     // 🔽 セーブ・ロード処理
@@ -366,17 +429,16 @@ public class WaterManager : MonoBehaviour
 
     private void SaveDirtToSaveData()
     {
-        if (SaveManager.Instance == null)
+        if (SaveManager.Instance == null || SaveManager.Instance.SaveDataInstance == null)
         {
-            Debug.LogWarning("⚠ SaveManager.Instance が null です。水質の保存をスキップします。");
+            Debug.LogWarning("⚠ SaveManager.Instance または SaveDataInstance が null です。水質の保存をスキップします。");
             return;
         }
 
-        SaveManager.Instance.SaveDataInstance.waterPollutionLevel = currentDirtAlpha;
-        SaveManager.Instance.Save();
-
-        Debug.Log($"💾 水質をセーブしました: {currentDirtAlpha}");
+        SaveManager.Instance.Save(); // すでに waterPollutionLevel を使用中なのでそのままセーブ
+        Debug.Log($"💾 水質をセーブしました: {SaveManager.Instance.SaveDataInstance.waterPollutionLevel}");
     }
+
 
     public void LoadDirtFromSaveData()
     {
@@ -393,14 +455,14 @@ public class WaterManager : MonoBehaviour
             return;
         }
 
-        float savedPollution = saveData.waterPollutionLevel;
-        Debug.Log($"📦 SaveData から読み込んだ水質（直接値）: {savedPollution}");
+        float savedPollution = Mathf.Clamp(saveData.waterPollutionLevel, 0f, maxDirtAlpha);
+        saveData.waterPollutionLevel = savedPollution;
 
-        // ✅ 修正ポイント：パーセンテージに変換しない！
-        currentDirtAlpha = Mathf.Clamp(savedPollution, 0f, maxDirtAlpha);
+        Debug.Log($"📦 SaveData から読み込んだ水質: {savedPollution}");
+
         UpdateDirtAlpha();
 
-        Debug.Log($"🧪 currentDirtAlpha = {currentDirtAlpha}, DirtPercentage = {DirtPercentage}%");
+        Debug.Log($"🧪 現在の水質: {saveData.waterPollutionLevel}, DirtPercentage = {DirtPercentage}%");
     }
 
 
@@ -412,17 +474,24 @@ public class WaterManager : MonoBehaviour
     /// </summary>
     public void ResetPollution()
     {
-        currentDirtAlpha = 0f;
+        if (SaveManager.Instance?.SaveDataInstance == null)
+        {
+            Debug.LogWarning("⚠ ResetPollution(): セーブデータが未初期化のためスキップします");
+            return;
+        }
+
+        SaveManager.Instance.SaveDataInstance.waterPollutionLevel = 0f;
         isMermaidKilled = false;
 
         UpdateDirtAlpha();
-        SaveDirtToSaveData();
+        SaveManager.Instance.Save();
 
         StopAllCoroutines(); // 念のため、既存のコルーチンを止める
         StartCoroutine(IncreaseDirtOverTime()); // 再スタート
 
         Debug.Log("🧼 ResetPollution(): 水質をリセットし、コルーチンを再開しました");
     }
+
 
 
 }
