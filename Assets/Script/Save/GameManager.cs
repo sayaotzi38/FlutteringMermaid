@@ -187,11 +187,16 @@ public class GameManager : MonoBehaviour
         {
             waterManager.LoadDirtFromSaveData();
             Debug.Log("✅ WaterManager に LoadDirtFromSaveData() を指示しました");
+
+            Debug.Log("🧼 SimulateTimePassed() から WaterManager を初期化します");
+            waterManager.StopAllCoroutines();
+            waterManager.StartCoroutine("MyStart");
         }
         else
         {
-            Debug.LogWarning("⚠ WaterManager が見つかりませんでした → 水質反映スキップ");
+            Debug.LogWarning("⚠ WaterManager が見つかりませんでした → 初期化スキップ");
         }
+
 
     }
 
@@ -285,5 +290,20 @@ public class GameManager : MonoBehaviour
         {
             Debug.LogWarning("⚠ SaveManager.Instance が null のため、セーブをスキップします");
         }
+
+
+        // WaterManager の再取得と再初期化処理
+        var waterManager = FindFirstObjectByType<WaterManager>();
+        if (waterManager != null)
+        {
+            Debug.Log("🧼 WaterManager を手動で初期化します");
+            waterManager.StopAllCoroutines(); // 念のためコルーチン停止
+            waterManager.StartCoroutine("MyStart"); // MyStart を再実行
+        }
+        else
+        {
+            Debug.LogWarning("⚠ WaterManager が見つからないため、手動初期化スキップ");
+        }
+
     }
 }

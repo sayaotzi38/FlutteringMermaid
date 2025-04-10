@@ -42,46 +42,63 @@ public class WaterManager : MonoBehaviour
     public float DirtPercentage => (SaveManager.Instance.SaveDataInstance.waterPollutionLevel / maxDirtAlpha) * 100f;
 
     public float MaxDirtAlpha => maxDirtAlpha;
-
-
-    private void Awake()
+    void Awake()
     {
-        // GameObjectのアクティブ直後に初期化コルーチンを開始
-        StartCoroutine(MyStart());
+        Debug.Log("🐣 WaterManager.Awake() 呼び出されました");
+
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                Debug.LogWarning("⚠ AudioSource がこの GameObject に存在しません。インスペクターで追加してください");
+            }
+        }
+    }
+
+
+
+    void OnEnable()
+    {
+        Debug.Log("📌 WaterManager.OnEnable() 呼び出されました");
     }
 
     private IEnumerator MyStart()
     {
-        // GameManagerとセーブデータの準備が完了するまで待機
-        yield return new WaitUntil(() =>
-            GameManager.Instance != null &&
-            GameManager.Instance.SaveManagerInstance != null &&
-            GameManager.Instance.SaveManagerInstance.SaveDataInstance != null);
+        Debug.Log("🔍 MyStart() 開始：GameManager, SaveManagerInstance, SaveDataInstance の準備を確認");
 
-        Debug.Log("🌊 WaterManager.MyStart(): GameManagerとSaveManagerの初期化完了 → LoadDirtFromSaveData 実行");
+        float timeout = 5f; // 5秒以内に準備が完了しない場合は中断
+        float elapsed = 0f;
 
-        // GameManagerがSimulateTimePassed()を呼び終えるまで少し待機
+        while (elapsed < timeout)
+        {
+            bool ready = GameManager.Instance != null &&
+                         GameManager.Instance.SaveManagerInstance != null &&
+                         GameManager.Instance.SaveManagerInstance.SaveDataInstance != null;
+
+            Debug.Log($"🧪 条件確認: GM={GameManager.Instance != null}, SM={GameManager.Instance?.SaveManagerInstance != null}, SD={GameManager.Instance?.SaveManagerInstance?.SaveDataInstance != null}");
+
+            if (ready)
+            {
+                Debug.Log("🌊 条件クリア → MyStart() 続行");
+                break;
+            }
+
+            yield return new WaitForSeconds(0.5f);
+            elapsed += 0.5f;
+        }
+
+        if (elapsed >= timeout)
+        {
+            Debug.LogError("❌ MyStart(): 初期化タイムアウト → 初期化を中止します");
+            yield break;
+        }
+
         yield return new WaitForSeconds(0.1f);
-
         LoadDirtFromSaveData();
-        Debug.Log($"💧 水質ロード完了: {SaveManager.Instance.SaveDataInstance.waterPollutionLevel}%");
-
         StartCoroutine(IncreaseDirtOverTime());
-
-        // その他のUI・音などの初期化
-        if (cleanWaterButton != null)
-        {
-            cleanWaterButton.onClick.AddListener(CleanWater);
-        }
-
-        audioSource = gameObject.AddComponent<AudioSource>();
-        audioSource.playOnAwake = false;
-
-        if (mermaidStatus == null)
-        {
-            mermaidStatus = FindAnyObjectByType<MermaidStatus>();
-        }
     }
+
 
 
 
@@ -135,7 +152,7 @@ public class WaterManager : MonoBehaviour
         AdmobLibrary.PlayInterstitial();
     }
 
-    private void CleanWater()
+    public void CleanWater()
     {
         Debug.Log("🧼 水替えを実行！ 汚れをリセットします。");
 
