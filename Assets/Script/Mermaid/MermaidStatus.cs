@@ -22,8 +22,7 @@ public class MermaidStatus : MermaidBase
     [Header("満腹度表示テキスト")]
     public TextMeshProUGUI stomachText;
 
-    [Header("デバッグ表示用：満腹度数値")]
-    public TextMeshProUGUI hungerDebugText;
+  
 
     [Header("水槽の汚れ管理")]
     public WaterManager waterManager;
@@ -115,11 +114,7 @@ public class MermaidStatus : MermaidBase
             returnButton.onClick.AddListener(ReturnToTitle);
         }
 
-        // 満腹度表示
-        if (hungerDebugText != null)
-        {
-            hungerDebugText.text = $"Hunger: {hunger:F2}%";
-        }
+       
 
         // 🔽 空腹コルーチン開始
         hungerRoutine = StartCoroutine(DecreaseHungerOverTime());
@@ -287,10 +282,7 @@ public class MermaidStatus : MermaidBase
         }
         
 
-        if (hungerDebugText != null)
-        {
-            hungerDebugText.text = $"Hunger: {hunger:F2}%";
-        }
+       
 
     }
 

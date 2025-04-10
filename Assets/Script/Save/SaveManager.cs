@@ -70,6 +70,9 @@ public class SaveManager : MonoBehaviour
         PlayerPrefs.SetInt("isWeak", SaveDataInstance.isWeak ? 1 : 0);
         PlayerPrefs.SetString("gameStartTime", SaveDataInstance.gameStartTime.ToString());
 
+        PlayerPrefs.SetString("LastPollutionLog", $"Saved {SaveDataInstance.waterPollutionLevel:F2}% at {DateTime.Now}");
+
+
         PlayerPrefs.Save();
         Debug.Log($"💾 セーブ完了！時刻: {SaveDataInstance.lastSaveTime}");
     }

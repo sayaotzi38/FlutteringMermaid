@@ -41,15 +41,29 @@ public class WaterManager : MonoBehaviour
     [SerializeField] private Image flashImage;
     [SerializeField] private float flashDuration = 0.5f;
 
+ 
+
     public float DirtPercentage => (currentDirtAlpha / maxDirtAlpha) * 100f;
     public float MaxDirtAlpha => maxDirtAlpha;
 
-    private void Start()
+    private IEnumerator Start()
     {
-       
+        // GameManager の初期化完了 → SaveDataInstance の読み込み完了まで待機
+        yield return new WaitUntil(() =>
+            GameManager.Instance != null &&
+            GameManager.Instance.SaveManagerInstance != null &&
+            GameManager.Instance.SaveManagerInstance.SaveDataInstance != null);
 
-        LoadDirtFromSaveData(); // ✅ セーブデータから汚れ度を復元
+        Debug.Log("🌊 WaterManager.Start(): GameManagerとSaveManagerの初期化完了 → LoadDirtFromSaveData 実行");
 
+        yield return new WaitForSeconds(0.1f); // ← 追加！少し待つことで確実にSimulateTimePassed後に反映される
+        LoadDirtFromSaveData();
+        Debug.Log($"💧 水質ロード完了: {SaveManager.Instance.SaveDataInstance.waterPollutionLevel}%");
+
+        StartCoroutine(IncreaseDirtOverTime());
+      
+
+        // その他の処理
         if (cleanWaterButton != null)
         {
             cleanWaterButton.onClick.AddListener(CleanWater);
@@ -61,19 +75,13 @@ public class WaterManager : MonoBehaviour
         if (mermaidStatus == null)
         {
             mermaidStatus = FindAnyObjectByType<MermaidStatus>();
-            if (mermaidStatus != null)
-            {
-                Debug.Log("✅ MermaidStatus を自動取得しました");
-            }
-            else
-            {
-                Debug.LogWarning("⚠ MermaidStatus が見つかりません！");
-            }
         }
 
-      
-        StartCoroutine(IncreaseDirtOverTime());
+       
+
     }
+
+
 
 
 
@@ -370,44 +378,33 @@ public class WaterManager : MonoBehaviour
         Debug.Log($"💾 水質をセーブしました: {currentDirtAlpha}");
     }
 
-    private void LoadDirtFromSaveData()
+    public void LoadDirtFromSaveData()
     {
         if (GameManager.Instance == null || GameManager.Instance.SaveManagerInstance == null)
         {
-            Debug.LogWarning("⚠ GameManagerが未初期化のため、水質ロードをスキップします");
+            Debug.LogWarning("⚠ LoadDirtFromSaveData(): GameManagerが未初期化のためスキップ");
             return;
         }
 
-        float savedPollution = GameManager.Instance.SaveManagerInstance.SaveDataInstance.waterPollutionLevel;
-
-        Debug.Log($"📦 SaveDataから読み込んだ水質: {savedPollution * 100f:0.00}%");
-
-        currentDirtAlpha = Mathf.Clamp(savedPollution, 0f, maxDirtAlpha);
-
-        Debug.Log($"📥 currentDirtAlpha に反映: {currentDirtAlpha * 100f:0.00}%");
-
-        UpdateDirtAlpha();
-
-        // 念のため再格納（不要であれば省略可）
-        SaveManager.Instance.SaveDataInstance.waterPollutionLevel = currentDirtAlpha;
-
-        if (mermaidStatus != null)
+        var saveData = GameManager.Instance.SaveManagerInstance.SaveDataInstance;
+        if (saveData == null)
         {
-            mermaidStatus.CheckWeakState();
-            Debug.Log("🔁 水質読み込み後に CheckWeakState() を呼び出しました");
+            Debug.LogWarning("⚠ LoadDirtFromSaveData(): SaveDataInstance が null のためスキップ");
+            return;
         }
-    }
 
+        float savedPollution = saveData.waterPollutionLevel;
+        Debug.Log($"📦 SaveData から読み込んだ水質（直接値）: {savedPollution}");
 
-    private void SyncPollutionFromSave()
-    {
-        currentDirtAlpha = Mathf.Clamp(
-            SaveManager.Instance.SaveDataInstance.waterPollutionLevel,
-            0f, maxDirtAlpha);
-
+        // ✅ 修正ポイント：パーセンテージに変換しない！
+        currentDirtAlpha = Mathf.Clamp(savedPollution, 0f, maxDirtAlpha);
         UpdateDirtAlpha();
-        Debug.Log($"🔁 SaveData から currentDirtAlpha を同期しました: {currentDirtAlpha}");
+
+        Debug.Log($"🧪 currentDirtAlpha = {currentDirtAlpha}, DirtPercentage = {DirtPercentage}%");
     }
+
+
+
 
 
     /// <summary>

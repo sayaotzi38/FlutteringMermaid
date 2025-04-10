@@ -34,43 +34,34 @@ public class GameManager : MonoBehaviour
             return;
         }
     }
-
-    void Start()
+    private IEnumerator Start()
     {
         Debug.Log("🎮 GameManager の Start が呼ばれました");
-        StartCoroutine(InitializeAfterDelay()); // ← これでセーブ初期化は確実に安全なタイミングで！
-    }
-
-
-    private IEnumerator InitializeAfterDelay()
-    {
-        yield return null;
-
-        Debug.Log("🚀 GameManager 起動！（1フレーム遅延）");
 
         SaveManagerInstance = SaveManager.Instance;
 
-        if (SaveManagerInstance == null)
-        {
-            Debug.LogError("❌ SaveManager.Instance が null → 処理中断");
-            yield break;
-        }
-
+        // セーブデータをここで必ずロードする（これがないと null のまま）
         SaveManagerInstance.Load();
 
-        yield return new WaitForSeconds(0.1f);
+        // SaveManager と SaveDataInstance の準備完了を待つ
+        yield return new WaitUntil(() =>
+            SaveManagerInstance != null &&
+            SaveManagerInstance.SaveDataInstance != null);
 
-        if (SaveManagerInstance.SaveDataInstance == null)
-        {
-            Debug.LogError("❌ SaveDataInstance が null → 処理中断");
-            yield break;
-        }
+        Debug.Log("✅ SaveDataInstance を確認しました → SimulateTimePassed 実行");
 
-        Debug.Log($"🕒 最後のセーブ時刻: {SaveManagerInstance.SaveDataInstance.lastSaveTime}");
-
-        Debug.Log("✅ SimulateTimePassed() を呼び出します");
-        SimulateTimePassed();
+        SimulateTimePassed();  // ← 水質の加算処理
     }
+
+
+
+
+
+
+
+
+
+
 
     private void InitializeAdmobOnce()
     {
@@ -129,6 +120,8 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void SimulateTimePassed()
     {
+        Debug.Log("🧪 SimulateTimePassed() 実行開始");
+
         if (SaveManager.Instance == null || SaveManager.Instance.SaveDataInstance == null)
         {
             Debug.LogWarning("⚠ SimulateTimePassed(): セーブデータが null → スキップ");
@@ -187,6 +180,19 @@ public class GameManager : MonoBehaviour
 
         saveData.lastSaveTime = now;
         SaveManager.Instance.Save();
+
+
+        var waterManager = FindFirstObjectByType<WaterManager>();
+        if (waterManager != null)
+        {
+            waterManager.LoadDirtFromSaveData();
+            Debug.Log("✅ WaterManager に LoadDirtFromSaveData() を指示しました");
+        }
+        else
+        {
+            Debug.LogWarning("⚠ WaterManager が見つかりませんでした → 水質反映スキップ");
+        }
+
     }
 
 

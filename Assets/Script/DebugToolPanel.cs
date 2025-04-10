@@ -13,8 +13,6 @@ public class DebugToolPanel : MonoBehaviour
     public MermaidStatus mermaidStatus;
     public WaterManager waterManager;
 
-    //[Header("水質関連")]
-    //public TextMeshProUGUI dirtText;
 
     [Header("まんぷく度0%")]
     public Button killButton;
@@ -51,8 +49,6 @@ public class DebugToolPanel : MonoBehaviour
            
         }
     }
-
-   
 
     /// <summary>
     /// 満腹度を0%にし、死亡処理を実行（確認付き）
